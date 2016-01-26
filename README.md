@@ -13,7 +13,8 @@ We'll need a reply class that will handle writing replies to reddit
 # Things we need to add
 * Give users cake upon request (as requested by /u/Y1ff)
 
-* Admin system - allow specific reddit users access to admin commands through pm
+* Admin system  
+ 	-allow specific reddit users access to admin commands through pm  
 	-Change intro message  
 	-Add new admins (only super admins can take away admin from users, I guess supers can create new supers too?)  
 	-turn on/off certain features?  
