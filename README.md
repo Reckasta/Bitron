@@ -4,8 +4,8 @@ A reddit bot.
 # Quick reminder
 Reddit bots break all the freaking time, try/except everything please
 
-# Writing
-This writes to a log file, will make it easier for me, mjone77, to keep up with errors and junk. Please write whatever you think is super important for me to see to this file. Or maybe we just use to bot to pm ourselves and don't even bother with a log file, either way would work.
+# How to bot speaks
+I (/u/mjone77) don't know the lore of the sub all that well, so I'm not sure how the bot should say things. Feel free to change his comment replies to better match the lore of the sub.
 
 # Reply
 We'll need a reply class that will handle writing replies to reddit
