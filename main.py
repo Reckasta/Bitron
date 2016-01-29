@@ -82,7 +82,8 @@ try:
         message+=welcomeMessage+'\n'
         refreshMemory()
         
-    #this is the second part of the welcome message that peopl can ask for on demand
+    #this is the second part of the welcome message that people can ask for on demand
+    #ready for initial usage in the bot - can be upgraded later
     def refreshMemory():
         global message
         message+=refreshMessage+'\n___\n'
