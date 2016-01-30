@@ -1,8 +1,6 @@
 '''
 This is a reddit bot coded by
 /u/Mjone77
-/u/honorguard42
-maybe some third guy if he decided he wants to
 '''
 import time
 import praw
@@ -16,8 +14,8 @@ try:
     try:
         config = configparser.ConfigParser()
         config.read('config.ini')
-        welcomeMessage = config['Welcome']['message']
-        refreshMessage = config['Welcome']['refresh']
+        welcomeMessageLines = config['Welcome']['message'].split('`^')
+        refreshMessageLines = config['Welcome']['refresh'].split('`^')
         alreadyWelcomed = config['Welcome']['alreadyWelcomed'].split()
         admins = config['Admin']['users'].split(',')
         alreadyReplied = config['Technical']['alreadyReplied'].split(',')
@@ -40,6 +38,13 @@ try:
     r.login('FacilityAI', '<passwordhere>')
     subreddit = r.get_subreddit('secretsubreddit')
     message = "" #add replies to this. Make sure to add a \n___\n (3 underscores) after every message. Hopefully this will allow multiple commands to be called with one comment
+    needSave = False
+    welcomeMessage = ''
+    refreshMessage = ''
+    for line in welcomeMessageLines:
+        welcomeMessage+=line+'\n\n'
+    for line in refreshMessageLines:
+        refreshMessage+=line+'\n\n'
     
     #Add comment or post id's to array and config.ini
     #idType: 0 is a comment.id, 1 is a username
@@ -50,10 +55,10 @@ try:
         elif idType == 1:
             alreadyWelcomed.append(idToAdd)
             config['Technical']['alreadyWelcomed']+=(idToAdd+',')
+    needSave = True
         
     #Checks the comments/posts/pm's for commands, and handles them
     def checkForCommands():
-        print("checkForCommands")
         global message
         recentComments = r.get_comments('secretsubreddit')
         for comment in recentComments:
@@ -71,10 +76,14 @@ try:
                     cake()
                 if '!refresh' in commentWords:
                     refreshMemory()
+                if '!nowelcome' in commentWords:
+                    addID(str(comment.author),1)
+                    message+='You have been registered as a veteran faculty member and will not be welcomed to work. Ever.\n___\n'
                 if message:
                     commentReply(comment)
         for submission in subreddit.get_new(limit=3):
-            if submission poster not in alreadyWelcomed: #how find submission OP?
+            if str(submission.author) not in alreadyWelcomed:
+                addID(str(submission.author), 1)
                 message = ''
                 welcome(submission)
             
@@ -82,7 +91,7 @@ try:
     #Reply to comments
     def commentReply(comment): #Don't forget takes in comment
         global message
-        comment.reply(message+"^^[meta][^^See ^^all ^^my ^^commands](wikilinkhere.com)^^|[suggest ^^new ^^features](linkToPmBot.com)^^|other ^^info ^^here")
+        comment.reply(message+"^^[meta]^^None ^^of ^^these ^^links ^^work ^^yet: [^^See ^^all ^^my ^^commands](wikilinkhere.com)^^|[suggest ^^new ^^features](linkToPmBot.com)^^|other ^^info ^^here")
         #is there a way to do the ^^ effect without having to do it before every word?
         
     #rolls dice and saves each roll in an array, total of the rolls is at the end of the array. This is done so that a table of the rolls can be made if needed.
@@ -121,14 +130,18 @@ try:
         global message
         message+=refreshMessage+'\n___\n'
         
+    #saves changes to config file
+    def saveConfig():
+        with open('config.ini','w') as configfile:
+            config.write(configfile)
+        print('done')
+        
     #Call everything the bot needs to do here, then write the code above
     while True:
         checkForCommands()
-        cake()
-        rollDice(2,6)
-        welcome()
-        refreshMemory()
-        commentReply()
+        if needSave:
+            saveConfig()
+            needSave = False
         time.sleep(10)
 except:
     print('Error')
