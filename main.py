@@ -13,8 +13,8 @@ import OAuth2Util
 try:
     config = configparser.ConfigParser()
     config.read('config.ini')
-    welcomeMessageLines = config['Welcome']['message'].split('`^')
-    refreshMessageLines = config['Welcome']['refresh'].split('`^')
+    welcomeMessageLines = config['Welcome']['message'].split('$')
+    refreshMessageLines = config['Welcome']['refresh'].split('$')
     admins = config['Admin']['users'].lower().split(',')
     alreadyReplied = config['Technical']['alreadyReplied'].split(',')
     alreadyWelcomed = config['Technical']['alreadyWelcomed'].split(',')
@@ -81,13 +81,19 @@ def analyzeText(comment):
     global message
     if '!' in comment.body and str(comment.id) not in alreadyReplied and str(comment.author) != 'FacilityAI':
         addID(str(comment.id), 0)
-        searchForCommands(comment.body, comment.author)
+        links = []
+        try:
+            links.append(comment.permalink)
+            links.append(comment.link_url)
+        except:
+            pass
+        searchForCommands(comment.body, comment.author, links)
         if message:
             commentReply(comment)
             message = ''
         
 #searches a string for commands
-def searchForCommands(body, author):
+def searchForCommands(body, author, links):
     global message
     global admins
     message = ''
@@ -124,16 +130,33 @@ def searchForCommands(body, author):
         print(str(author))
         addID(str(author),1)
         message+='You have been registered as a veteran faculty member and will not be welcomed to work. Ever.\n___\n'
+    if '!summon' in commentWords:
+        try:
+            customSplit = body[body.lower().find('!summon'):len(body)].split('"')
+            custom = ''
+            if len(customSplit)>1:
+                custom = customSplit[1]
+            users = body[body.lower().find('!summon'):len(body)].split("'")[1].split(' ')
+            summon(str(author), users, custom, links)
+        except:
+            message+='Something went wrong, please remember the formating (no u/ needed):\n\n!summon\' name name name name\' "optional additional message"\n___\n'
+    '''
+    Admin commands
+    '''
     if str(author).lower() in admins:
         global needConfirmRefresh
         global tempRefresh
         global needSave
         if needConfirmRefresh:
-            if '!confirmrefresh' in commentWords:
+            if '!cancelrefresh' in commentWords:
+                needConfirmRefresh = False
+                tempRefresh = ''
+                message+='Changes to !refresh have been canceled.'
+            elif '!confirmrefresh' in commentWords:
                 try:
                     global refreshMessage
                     config['Welcome']['refresh'] = tempRefresh
-                    refreshMessageLines = tempRefresh.split('`^')
+                    refreshMessageLines = tempRefresh.split('$')
                     refreshMessage = ''
                     for line in refreshMessageLines:
                         refreshMessage+=line+'\n\n'
@@ -146,12 +169,12 @@ def searchForCommands(body, author):
         if '!updaterefresh' in commentWords:
             try:
                 tempRefresh = body[body.lower().find('!updaterefresh'):len(body)].split('"')[1]
-                msg = tempRefresh.split('`^')
+                msg = tempRefresh.split('$')
                 sampleRefresh = ''
                 for line in msg:
                     sampleRefresh+=line+'\n\n'
                 needConfirmRefresh = True
-                message+='The refresh message will be set to this once you reply with !confirmRefresh:\n___ \n\n'+sampleRefresh+'\n___\n'
+                message+='The refresh message will be set to this once you reply with !confirmRefresh (!cancelRefresh to abort changes):\n___\n\n'+sampleRefresh+'\n___\n'
             except:
                 message+='Something went wrong when attempting to update the Refresh message, please try again. Refer to the wiki for a guide on how to update the message or pm /u/Mjone77 if you have any questions.\n___\n'    
         if '!refreshsource' in commentWords:
@@ -276,6 +299,27 @@ def a1z26Rev(offset, msg):
         valueBetween1And26(finalNum)
         lets = lets+str(chr(finalNum+64))
     return lets
+
+#sends a PM to an array of 'users' with a 'custom' message and tells the 'sender' that requested the notification
+def summon(sender, users, custom, links):
+    global messageEnd
+    global message
+    message+='Summon status:\n\n'
+    for usr in users:
+        msg = sender+' has requested me to summon you.'
+        if custom:
+            msg+='\n\nHe says: '+custom
+        if len(links) == 0:
+            msg+='\n\nI can not provide a location of the summon.'
+        else:
+            msg+='\n\nPlease arrive soon to [the thread]('+links[1]+') or [the comment]('+links[0]+').'
+        msg+='\n___\n'+messageEnd
+        try:
+            r.send_message(usr, 'You have been summoned', msg)
+            message+=usr+' summoned\n\n'
+        except:
+            message+=usr+' failed\n\n'
+    message+='\n___\n'
 
 #Tells me it started without error
 print('Starting')
