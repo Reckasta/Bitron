@@ -14,7 +14,7 @@ try:
     config = configparser.ConfigParser()
     config.read('config.ini')
     welcomeMessageLines = config['Welcome']['message'].split('$')
-    refreshMessageLines = config['Welcome']['refresh'].split('$')
+    refreshMessageLines = config['Welcome']['refresh']
     admins = config['Admin']['users'].lower().split(',')
     alreadyReplied = config['Technical']['alreadyReplied'].split(',')
     alreadyWelcomed = config['Technical']['alreadyWelcomed'].split(',')
@@ -138,8 +138,9 @@ def searchForCommands(body, author, links):
                 custom = customSplit[1]
             users = body[body.lower().find('!summon'):len(body)].split("'")[1].split(' ')
             summon(str(author), users, custom, links)
-        except:
-            message+='Something went wrong, please remember the formating (no u/ needed):\n\n!summon\' name name name name\' "optional additional message"\n___\n'
+        except Exception as e:
+            print(e)
+            message+='Something went wrong, please remember the formating (no u/ needed):\n\n!summon \'name name name name\' "optional additional message"\n\nError Message (for dev): \n\n'+str(e)+'\n___\n'
     '''
     Admin commands
     '''
@@ -151,12 +152,12 @@ def searchForCommands(body, author, links):
             if '!cancelrefresh' in commentWords:
                 needConfirmRefresh = False
                 tempRefresh = ''
-                message+='Changes to !refresh have been canceled.'
+                message+='Changes to !refresh have been canceled.\n\n___'
             elif '!confirmrefresh' in commentWords:
                 try:
                     global refreshMessage
                     config['Welcome']['refresh'] = tempRefresh
-                    refreshMessageLines = tempRefresh.split('$')
+                    refreshMessageLines = tempRefresh
                     refreshMessage = ''
                     for line in refreshMessageLines:
                         refreshMessage+=line+'\n\n'
@@ -168,11 +169,11 @@ def searchForCommands(body, author, links):
                     message+='Something went wrong when attempting to update the Refresh message, please try again. Refer to the wiki for a guide on how to update the message or pm /u/Mjone77 if you have any questions.\n___\n'
         if '!updaterefresh' in commentWords:
             try:
-                tempRefresh = body[body.lower().find('!updaterefresh'):len(body)].split('"')[1]
-                msg = tempRefresh.split('$')
-                sampleRefresh = ''
-                for line in msg:
-                    sampleRefresh+=line+'\n\n'
+                tempRefresh = body[body.lower().find('!updaterefresh')+15:len(body)] #removed the split at ", now it just uses the complete message
+                msg = tempRefresh
+                sampleRefresh = tempRefresh+'\n\n'#''
+                #for line in msg:
+                #    sampleRefresh+=line+'\n\n'
                 needConfirmRefresh = True
                 message+='The refresh message will be set to this once you reply with !confirmRefresh (!cancelRefresh to abort changes):\n___\n\n'+sampleRefresh+'\n___\n'
             except:
@@ -181,15 +182,17 @@ def searchForCommands(body, author, links):
             message+=config['Welcome']['refresh']+'\n___\n'
         if '!addadmin' in commentWords:
             try:
-                if commentWords[commentWords.index('!addadmin')+1] not in admins:
-                    admins+=commentWords[commentWords.index('!addadmin')+1]
+                if str(commentWords[commentWords.index('!addadmin')+1]) not in admins:
+                    admins.append(str(commentWords[commentWords.index('!addadmin')+1]))
                     tempAdmins = ''
                     for name in admins:
-                        tempAdmins+=name+','
+                        if(name):
+                            tempAdmins+=name+','
                     config['Admin']['users'] = tempAdmins
                     needSave = True
                 message+='The admins are now:\n\n'+str(admins)+'\n___\n'
-            except:
+            except Exception as e:
+                print(e)
                 message+='Something went wrong, please make sure your command looks like this:\n\n!addAdmin name\n___\n'
 #Reply to comments
 def commentReply(comment): #Don't forget takes in comment
@@ -202,22 +205,24 @@ def commentReply(comment): #Don't forget takes in comment
 #command can be '!roll 5d6' or something like that
 #ready for initial usage in the bot - can be upgraded later
 def rollDice(amnt, sides):
-    total = 0
-    #rolls = []
-    for i in range(0,amnt):
-        del i
-        roll = random.randrange(sides)+1 
-        total+=roll
-        #rolls.append(roll)
-    #rolls.append(total)
-    global message
-    isPluralDice = ' die '
-    isPluralSides = ''
-    if amnt != 1:
-        isPluralDice = ' dice '
-        isPluralSides = ' each'
-    message+="You roll "+str(amnt)+isPluralDice+"with "+str(sides)+' sides'+isPluralSides+".\n\nYour total is: **"+str(total)+"**\n___\n"
-
+	if amnt <= 1000000 and sides <= 1000000:
+		total = 0
+		#rolls = []
+		for i in range(0,amnt):
+			del i
+			roll = random.randrange(sides)+1 
+			total+=roll
+			#rolls.append(roll)
+		#rolls.append(total)
+		global message
+		ispluraldice = ' die '
+		ispluralsides = ''
+		if amnt != 1:
+			ispluraldice = ' dice '
+			ispluralsides = ' each'
+		message+="you roll "+str(amnt)+ispluraldice+"with "+str(sides)+' sides'+ispluralsides+".\n\nyour total is: **"+str(total)+"**\n___\n"
+	else:
+		message+="A number you entered was too large, please only use numbers that are equal to or less than 1000000\n___\n"
 #makes a cake, probably won't use this actual method in the final code as it's so short
 #command can be '!cake' or something like that, or you mentioned something about it being taken under verbage
 #ready for initial usage in the bot - can be upgraded later
