@@ -14,7 +14,7 @@ try:
     config = configparser.ConfigParser()
     config.read('config.ini')
     welcomeMessageLines = config['Welcome']['message'].split('$')
-    refreshMessageLines = config['Welcome']['refresh']
+    refreshMessage = config['Welcome']['refresh']
     admins = config['Admin']['users'].lower().split(',')
     alreadyReplied = config['Technical']['alreadyReplied'].split(',')
     alreadyWelcomed = config['Technical']['alreadyWelcomed'].split(',')
@@ -39,13 +39,10 @@ subreddit = r.get_subreddit('secretsubreddit')
 message = "" #add replies to this. Make sure to add a \n___\n (3 underscores) after every message. Hopefully this will allow multiple commands to be called with one comment
 needSave = False
 welcomeMessage = ''
-refreshMessage = ''
 tempRefresh = ''
 needConfirmRefresh = False
 for line in welcomeMessageLines:
     welcomeMessage+=line+'\n\n'
-for line in refreshMessageLines:
-    refreshMessage+=line+'\n\n'
 messageEnd = "[meta][See all my commands](http://secretsubreddit.wikia.com/wiki/FacilityAI)|[suggest new features](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Suggestion)|[report bugs/errors](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Report)"
 
 #Add comment or post id's to array and config.ini
@@ -196,7 +193,7 @@ def searchForCommands(body, author, links):
                 message+='Something went wrong, please make sure your command looks like this:\n\n!addAdmin name\n___\n'
 #Reply to comments
 def commentReply(comment): #Don't forget takes in comment
-    print('replying\n'+comment.body)
+    print('replying\n'+comment.body'\n______________________________\n')
     global message
     comment.reply(message+messageEnd)
     #is there a way to do the ^^ effect without having to do it before every word?
@@ -333,7 +330,6 @@ while True:
     try:
         checkForCommands()
         if needSave:
-            print('saving')
             saveConfig()
             needSave = False
         time.sleep(10)
