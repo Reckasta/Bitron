@@ -36,6 +36,7 @@ r = praw.Reddit('who really cares what goes here???')
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 subreddit = r.get_subreddit('secretsubreddit')
+#Set up variables
 message = "" #add replies to this. Make sure to add a \n___\n (3 underscores) after every message. Hopefully this will allow multiple commands to be called with one comment
 needSave = False
 welcomeMessage = ''
@@ -44,6 +45,7 @@ needConfirmRefresh = False
 for line in welcomeMessageLines:
     welcomeMessage+=line+'\n\n'
 messageEnd = "[meta][See all my commands](http://secretsubreddit.wikia.com/wiki/FacilityAI)|[suggest new features](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Suggestion)|[report bugs/errors](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Report)"
+refreshMsgLines = refreshMessage.split('\n')
 
 #Add comment or post id's to array and config.ini
 #idType: 0 is a comment.id, 1 is a username
@@ -138,6 +140,30 @@ def searchForCommands(body, author, links):
         except Exception as e:
             print(e)
             message+='Something went wrong, please remember the formating (no u/ needed):\n\n!summon \'name name name name\' "optional additional message"\n\nError Message (for dev): \n\n'+str(e)+'\n___\n'
+    if '!editdesc' in commentWords:
+        user = '/u/'+str(author)+':'
+        mssg = body[body.lower().find('!editdesc'):len(body)].split("'")[1]
+        if checkMsg(mssg):
+            if findLine(user.lower()) is None:
+                addLine(user, mssg)
+                message+='You have been added to the refresh message.\n\n'
+            else:
+                changeLine(user, mssg)
+                message+='Your description has been changed.\n\n'
+            message+=findLine(user.lower())+'\n\nIf your message was cut short, ensure that it does not contain \'.'
+        else:
+            message+='Your description violates the requirements, make sure it is under 600 characters and has no line breaks.\n\n'
+        message+='\n___\n'
+    if '!refreshuser' in commentWords:
+        user = '/u/'+body[body.lower().find('!refreshuser'):len(body)].split(" ")[1].lower()+':'
+        if findLine(user) is None:
+            message+='This user is not in the refresh message.'
+        else:
+            message+=findLine(user)+'\n\n'
+        message+='\n___\n'
+    if '!give' in commentWords:
+        item = commentWords[commentWords.index('!give')+1]
+        message+="Here is the "+item+" that you requested.\n___\n"
     '''
     Admin commands
     '''
@@ -193,7 +219,7 @@ def searchForCommands(body, author, links):
                 message+='Something went wrong, please make sure your command looks like this:\n\n!addAdmin name\n___\n'
 #Reply to comments
 def commentReply(comment): #Don't forget takes in comment
-    print('replying\n'+comment.body'\n______________________________\n')
+    print('replying\n'+comment.body+'\n______________________________\n')
     global message
     comment.reply(message+messageEnd)
     #is there a way to do the ^^ effect without having to do it before every word?
@@ -202,31 +228,32 @@ def commentReply(comment): #Don't forget takes in comment
 #command can be '!roll 5d6' or something like that
 #ready for initial usage in the bot - can be upgraded later
 def rollDice(amnt, sides):
-	if amnt <= 1000000 and sides <= 1000000:
-		total = 0
-		#rolls = []
-		for i in range(0,amnt):
-			del i
-			roll = random.randrange(sides)+1 
-			total+=roll
-			#rolls.append(roll)
-		#rolls.append(total)
-		global message
-		ispluraldice = ' die '
-		ispluralsides = ''
-		if amnt != 1:
-			ispluraldice = ' dice '
-			ispluralsides = ' each'
-		message+="you roll "+str(amnt)+ispluraldice+"with "+str(sides)+' sides'+ispluralsides+".\n\nyour total is: **"+str(total)+"**\n___\n"
-	else:
-		message+="A number you entered was too large, please only use numbers that are equal to or less than 1000000\n___\n"
+    if amnt <= 1000000 and sides <= 1000000:
+        total = 0
+        rolls = []
+        for i in range(0,amnt):
+            del i
+            roll = random.randrange(sides)+1 
+            total+=roll
+            rolls.append(roll)
+        #rolls.append(total)
+        global message
+        if amnt == 1:
+            message+="You roll a "+str(sides)+" sided die.\n\nYour result is: **"+str(total)+"**\n___\n"
+        else:
+            message+="You roll "+str(amnt)+" dice with "+str(sides)+" sides each.\n\nYour results are: \n\n**"
+            for i in range(0,amnt):
+                message+=str(rolls[i])+"**\n\n**"
+            message+="**\n\nYour total is: **"+str(total)+"**\n___\n" 
+    else:
+        message+="A number you entered was too large, please only use numbers that are equal to or less than 1000000\n___\n"
 #makes a cake, probably won't use this actual method in the final code as it's so short
 #command can be '!cake' or something like that, or you mentioned something about it being taken under verbage
 #ready for initial usage in the bot - can be upgraded later
 def cake():
     global message
     #message+="Here is your cake sir:\n\n      ,,,,,  \n     _|||||_  \n    {~\*~\*~\*~}  \n  __{\*~\*~\*~\*}__  \n `-------------`\n___\n"
-    message+="Here is your cake sir:\n\n*tube descends from the ceiling and spits out a [cake](http://cakes-by-bill.com/images/birthday_pic5.jpg)*\n___\n"
+    message+="Here is your cake sir:\n\n*tube descends from the ceiling and spits out a [cake](http://i.imgur.com/KeSyZN9.jpg)*\n___\n"
 
 #this is the welcome message. Will be replied to posts of users that have never posted before
 #ready for initial usage in the bot - can be upgraded later
@@ -306,7 +333,7 @@ def a1z26Rev(offset, msg):
 def summon(sender, users, custom, links):
     global messageEnd
     global message
-    message+='Summon status:\n\n'
+    failed = False;
     for usr in users:
         msg = sender+' has requested me to summon you.'
         if custom:
@@ -318,10 +345,62 @@ def summon(sender, users, custom, links):
         msg+='\n___\n'+messageEnd
         try:
             r.send_message(usr, 'You have been summoned', msg)
-            message+=usr+' summoned\n\n'
+            #message+=usr+' summoned\n\n'
         except:
-            message+=usr+' failed\n\n'
+            message+=usr+' failed.\n\n'
+            failed = True;
+    if failed:
+        message+='All users except those above have been summoned at your request.\n\n'
+    else:
+        message+='All users have been summoned at your request.\n\n'
     message+='\n___\n'
+
+#change an existing user
+#user is a string formatted like this: /u/name:
+def changeLine(user, message):
+    global refreshMsgLines
+    for i in range(len(refreshMsgLines)):
+        name = refreshMsgLines[i].lower().split(' ')[0]
+        if user.lower() == name:
+            #print('match')
+            if checkMsg(message):
+                refreshMsgLines[i] = user+' '+message+'\n\n'
+                reconstructRefresh()
+            break
+
+#add a user
+def addLine(user, message):
+    global refreshMsgLines
+    newLine = user+' '+message+'\n\n'
+    refreshMsgLines.append(newLine)
+    reconstructRefresh()
+
+#find user
+def findLine(user):
+    global refreshMsgLines
+    for i in range(len(refreshMsgLines)):
+        name = refreshMsgLines[i].lower().split(' ')[0]
+        if user == name:
+            return refreshMsgLines[i]
+            break
+
+#600 char max
+#no line breaks
+def checkMsg(message):
+    if '\n' in message or len(message) > 600:
+        return False
+    else:
+        return True
+
+def reconstructRefresh():
+    global refreshMsgLines
+    global refreshMessage
+    global needSave
+    refreshMessage = ''
+    for line in refreshMsgLines:
+        refreshMessage+=line
+    config['Welcome']['refresh']=refreshMessage
+    needSave = True
 
 #Tells me it started without error
 print('Starting')
