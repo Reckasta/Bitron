@@ -161,6 +161,13 @@ def searchForCommands(body, author, links):
         else:
             message+=findLine(user)+'\n\n'
         message+='\n___\n'
+    if '!removedesc' in commentWords:
+        user = '/u/'+str(author)+':'
+        if findLine(user.lower()) is None:
+            message+='You are not in the refresh message.\n___\n'
+        else:
+            changeLine(user, '')
+            message+='You have been removed from the refresh message.\n___\n'
     if '!give' in commentWords:
         item = commentWords[commentWords.index('!give')+1]
         message+="Here is the "+item+" that you requested.\n___\n"
@@ -179,10 +186,11 @@ def searchForCommands(body, author, links):
             elif '!confirmrefresh' in commentWords:
                 try:
                     global refreshMessage
+                    global refreshMsgLines
                     config['Welcome']['refresh'] = tempRefresh
-                    refreshMessageLines = tempRefresh
+                    refreshMsgLines = tempRefresh.split('\n')
                     refreshMessage = ''
-                    for line in refreshMessageLines:
+                    for line in refreshMsgLines:
                         refreshMessage+=line+'\n\n'
                     needSave = True
                     needConfirmRefresh = False
@@ -217,6 +225,13 @@ def searchForCommands(body, author, links):
             except Exception as e:
                 print(e)
                 message+='Something went wrong, please make sure your command looks like this:\n\n!addAdmin name\n___\n'
+        if '!removeuser' in commentWords:
+            user = '/u/'+body[body.lower().find('!removeuser'):len(body)].split(" ")[1].lower()+':'
+            if findLine(user) is None:
+                message+='This user is not in the refresh message.\n___\n'
+            else:
+                changeLine(user, '')
+                message+= body[body.lower().find('!removeuser'):len(body)].split(" ")[1] + ' has been removed from the refresh message.\n___\n'
 #Reply to comments
 def commentReply(comment): #Don't forget takes in comment
     print('replying\n'+comment.body+'\n______________________________\n')
@@ -241,10 +256,15 @@ def rollDice(amnt, sides):
         if amnt == 1:
             message+="You roll a "+str(sides)+" sided die.\n\nYour result is: **"+str(total)+"**\n___\n"
         else:
-            message+="You roll "+str(amnt)+" dice with "+str(sides)+" sides each.\n\nYour results are: \n\n**"
+            message+="You roll "+str(amnt)+" dice with "+str(sides)+" sides each.\n\n"
+            message+="\nYour total is: **"+str(total)+'**\n\n'
+            if amnt > 100:
+                amnt = 100
+                message+="I can only show a maximum of 100 results at once.\n\n"
+            message+="Your results are: \n\n|Die|#|\n-|-\n"
             for i in range(0,amnt):
-                message+=str(rolls[i])+"**\n\n**"
-            message+="**\n\nYour total is: **"+str(total)+"**\n___\n" 
+                message+=str(i+1)+'|'+str(rolls[i])+"|\n"
+            message+="\n___\n"
     else:
         message+="A number you entered was too large, please only use numbers that are equal to or less than 1000000\n___\n"
 #makes a cake, probably won't use this actual method in the final code as it's so short
@@ -267,7 +287,10 @@ def welcome(submission):
 #ready for initial usage in the bot - can be upgraded later
 def refreshMemory():
     global message
-    message+=refreshMessage+'\n___\n'
+    if len(message) > 10000:
+        message+='The refresh message is over 10k characters long and can not fit in a Reddit comment, please have my admins remove old descriptions or have users remove themselves from the description.\n___\n'
+    else:
+        message+=refreshMessage+'\n___\n'
     
 #saves changes to config file
 def saveConfig():
@@ -363,18 +386,26 @@ def changeLine(user, message):
         name = refreshMsgLines[i].lower().split(' ')[0]
         if user.lower() == name:
             #print('match')
-            if checkMsg(message):
-                refreshMsgLines[i] = user+' '+message+'\n\n'
+            if message:
+                if checkMsg(message):
+                    refreshMsgLines[i] = user+' '+message+'\n\n'
+                    reconstructRefresh()
+                break
+            else:
+                refreshMsgLines.pop(i)
                 reconstructRefresh()
-            break
+                break
 
 #add a user
-def addLine(user, message):
+def addLine(user, msg):
     global refreshMsgLines
-    newLine = user+' '+message+'\n\n'
-    refreshMsgLines.append(newLine)
-    reconstructRefresh()
-
+    global message
+    if msg:
+        newLine = user+' '+msg+'\n\n'
+        refreshMsgLines.append(newLine)
+        reconstructRefresh()
+    else:
+        message+='You can not add a blank description.\n\n'
 #find user
 def findLine(user):
     global refreshMsgLines
@@ -396,9 +427,13 @@ def reconstructRefresh():
     global refreshMsgLines
     global refreshMessage
     global needSave
+    firstline = True
     refreshMessage = ''
     for line in refreshMsgLines:
         refreshMessage+=line
+        if firstline:
+            refreshMessage+="\n\n"
+            firstline = False
     config['Welcome']['refresh']=refreshMessage
     needSave = True
 
