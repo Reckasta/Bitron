@@ -2,12 +2,13 @@
 This is a reddit bot coded by
 /u/Mjone77
 '''
-import time
 import praw
 import random
 import sys
 import configparser
 import OAuth2Util
+import discord
+import asyncio
 
 #This sets up the variables and junk from the ini file, also creates an ini file if it is missing
 try:
@@ -17,7 +18,12 @@ try:
     refreshMessage = config['Welcome']['refresh']
     admins = config['Admin']['users'].lower().split(',')
     alreadyReplied = config['Technical']['alreadyReplied'].split(',')
+    alreadyReplied.pop() #removes empty item on the end
     alreadyWelcomed = config['Technical']['alreadyWelcomed'].split(',')
+    alreadyWelcomed.pop()
+    seenPosts = config['Technical']['seenPosts'].split(',')
+    seenPosts.pop()
+    token = config['Accnt']['discordToken'] #the token for discord
 except Exception as e:
     print(str(e))
     config = configparser.ConfigParser()
@@ -25,7 +31,9 @@ except Exception as e:
                          'refresh': 'Refresh'}
     config['Admin'] = {'users': ''}
     config['Technical'] = {'alreadyReplied': '',
-                           'alreadyWelcomed': ''}
+                           'alreadyWelcomed': '',
+                           'seenPosts': ''}
+    config['Accnt'] = {'discordToken': ''}
     with open('config-new.ini','w') as configfile:
         config.write(configfile)
     print("Please complete generated config-new.ini")
@@ -47,20 +55,35 @@ for line in welcomeMessageLines:
 messageEnd = "[meta][See all my commands](http://secretsubreddit.wikia.com/wiki/FacilityAI)|[suggest new features](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Suggestion)|[report bugs/errors](https://www.reddit.com/message/compose/?to=Mjone77&subject=FacilityAI_Report)"
 refreshMsgLines = refreshMessage.split('\n')
 
+#creates a client object for discord
+client = discord.Client()
+
+
 #Add comment or post id's to array and config.ini
 #idType: 0 is a comment.id, 1 is a username
 def addID(idToAdd, idType):
     if idType == 0:
         alreadyReplied.append(idToAdd)
-        config['Technical']['alreadyReplied']+=(idToAdd+',')
+        while (len(alreadyReplied)>100):
+            alreadyReplied.pop(0)
+        config['Technical']['alreadyReplied']= ''
+        for comment in alreadyReplied:
+            config['Technical']['alreadyReplied']+=(comment+',')
     elif idType == 1:
         alreadyWelcomed.append(idToAdd)
         config['Technical']['alreadyWelcomed']+=(idToAdd+',')
+    elif idType == 2:
+        seenPosts.append(idToAdd)
+        while (len(seenPosts) > 5) :
+            seenPosts.pop(0)
+        config['Technical']['seenPosts']= ''
+        for post in seenPosts:
+            config['Technical']['seenPosts']+=(post+',')
     global needSave
     needSave = True
     
 #Checks the comments/posts/pm's for commands, and handles them
-def checkForCommands():
+async def checkForCommands():
     global message
     recentComments = r.get_comments('secretsubreddit')
     #Checks for commands in comments
@@ -74,6 +97,9 @@ def checkForCommands():
             addID(str(submission.author), 1)
             message = ''
             #welcome(submission)
+        if str(submission.id) not in seenPosts:
+            await announcePost(submission)
+            addID(submission.id, 2)
 
 #searches for possible commands in a comment/pm, then passes them on to be searched and replied to
 def analyzeText(comment):
@@ -437,16 +463,52 @@ def reconstructRefresh():
     config['Welcome']['refresh']=refreshMessage
     needSave = True
 
-#Tells me it started without error
-print('Starting')
+######################################################
+#              DISCORD BOT BELOW                     #
+######################################################
+#takes in a post, retrieves the title and link, and announces the post to the discord server
+async def announcePost(post): 
+    await client.wait_until_ready()
+    disMessage = '@everyone Breaking News! There\'s a new post by /u/'+str(post.author)+'!\n'+str(post.short_link)
+    print (disMessage)
+    channel = client.get_channel('267110648075386881')
+    await client.send_message(channel, disMessage)
+
+######################################################
+#               DISCORD BOT END                      #
+######################################################
+
+
+#this is the task that runs the entire bot
+async def backgroundTask():
+    global needSave
+    await client.wait_until_ready()
+    #Tells me it started without error
+    print('Starting')
+    while True:
+        try:
+            await checkForCommands()
+            if needSave:
+                saveConfig()
+                needSave = False
+            await asyncio.sleep(10)
+        except Exception as e:
+            print(e)
+            await asyncio.sleep(30)
+
+client.loop.create_task(backgroundTask())
+client.run(token)
+
+
+#this is the old infinite loop
 #Call everything the bot needs to do here, then write the code above
-while True:
-    try:
-        checkForCommands()
-        if needSave:
-            saveConfig()
-            needSave = False
-        time.sleep(10)
-    except Exception as e:
-        print(e)
-        time.sleep(30) #we can change the time to whatever
+#while True:
+#     try:
+#         checkForCommands()
+#         if needSave:
+#             saveConfig()
+#             needSave = False
+#         time.sleep(10)
+#     except Exception as e:
+#         print(e)
+#         time.sleep(30) #we can change the time to whatever
