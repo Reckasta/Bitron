@@ -469,7 +469,7 @@ def reconstructRefresh():
 #takes in a post, retrieves the title and link, and announces the post to the discord server
 async def announcePost(post): 
     await client.wait_until_ready()
-    disMessage = 'Breaking News! There\'s a new post by /u/'+str(post.author)+'!\n'+str(post.short_link)
+    disMessage = '@everyone Breaking News! There\'s a new post by /u/'+str(post.author)+'!\n'+str(post.short_link)
     print (disMessage)
     channel = client.get_channel('267110648075386881')
     await client.send_message(channel, disMessage)
