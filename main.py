@@ -485,7 +485,7 @@ async def backgroundTask():
     await client.wait_until_ready()
     #Tells me it started without error
     print('Starting')
-    while not client.is_closed():
+    while not client.is_closed:
         try:
             await checkForCommands()
             if needSave:
