@@ -64,7 +64,7 @@ client = discord.Client()
 def addID(idToAdd, idType):
     if idType == 0:
         alreadyReplied.append(idToAdd)
-        while (len(alreadyReplied)>100):
+        while (len(alreadyReplied)>100): #only keep 100 most recent replied comments
             alreadyReplied.pop(0)
         config['Technical']['alreadyReplied']= ''
         for comment in alreadyReplied:
@@ -74,7 +74,7 @@ def addID(idToAdd, idType):
         config['Technical']['alreadyWelcomed']+=(idToAdd+',')
     elif idType == 2:
         seenPosts.append(idToAdd)
-        while (len(seenPosts) > 5) :
+        while (len(seenPosts) > 5) : #only keep 5 most recent seen posts
             seenPosts.pop(0)
         config['Technical']['seenPosts']= ''
         for post in seenPosts:
@@ -469,7 +469,7 @@ def reconstructRefresh():
 #takes in a post, retrieves the title and link, and announces the post to the discord server
 async def announcePost(post): 
     await client.wait_until_ready()
-    disMessage = '@everyone Breaking News! There\'s a new post by /u/'+str(post.author)+'!\n'+str(post.short_link)
+    disMessage = 'Breaking News! There\'s a new post by /u/'+str(post.author)+'!\n'+str(post.short_link)
     print (disMessage)
     channel = client.get_channel('267110648075386881')
     await client.send_message(channel, disMessage)
@@ -485,7 +485,7 @@ async def backgroundTask():
     await client.wait_until_ready()
     #Tells me it started without error
     print('Starting')
-    while True:
+    while not client.is_closed():
         try:
             await checkForCommands()
             if needSave:
@@ -496,8 +496,15 @@ async def backgroundTask():
             print(e)
             await asyncio.sleep(30)
 
-client.loop.create_task(backgroundTask())
-client.run(token)
+#this loop restarts the bot when it stops running
+while True:
+    try: 
+        #runs the backgroundTask() loop in the background, so basically this starts the bot
+        client.loop.create_task(backgroundTask())
+        #starts the discord bot
+        client.run(token)
+    except:
+        pass
 
 
 #this is the old infinite loop
