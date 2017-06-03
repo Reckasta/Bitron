@@ -1,9 +1,4 @@
-"""
-This is totally a bot I made
-If you steal it... That's Ok I don't mind
-better for small subreddits
-Wow I'm actually amazed this works?
-"""
+
 #Imports
 import praw
 import re
@@ -68,7 +63,7 @@ def parseComment(comment):
 	return result
 
 # log in and initialization
-agent = 'Facility AI by /u/honorguard42'
+agent = 'FacilityAI Reborn by Reckasta (Stolen from HG42 with Credit to Mjone44)'
 
 already_done = []
 
